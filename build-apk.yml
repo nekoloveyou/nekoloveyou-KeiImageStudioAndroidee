@@ -1,0 +1,40 @@
+name: Build Kei Offline Drawing APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/build-apk.yml'
+      - 'scripts/**'
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Android SDK
+        uses: android-actions/setup-android@v4
+      - name: Fetch offline image generation engine
+        run: git clone --recursive --depth 1 https://github.com/xororz/local-dream.git engine
+      - name: Apply Kei branding and debug signing
+        run: python3 scripts/prepare.py
+      - name: Build APK
+        working-directory: engine
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleBasicDebug --no-daemon --stacktrace
+      - name: Publish installable APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: KeiOfflineStudio-Android-APK
+          path: engine/app/build/outputs/apk/basic/debug/*.apk
+          if-no-files-found: error
