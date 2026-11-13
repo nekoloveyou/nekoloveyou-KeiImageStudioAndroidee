@@ -1,0 +1,54 @@
+
+name: Build Kei Offline Drawing APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Download Local Dream
+        run: git clone --recursive https://github.com/xororz/local-dream.git engine
+
+      - name: Apply Kei settings
+        run: python scripts/prepare.py
+
+      - name: Build APK
+        working-directory: engine
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleBasicDebug assembleFilterDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: KeiOfflineStudio-Android-APK
+          path: |
+            engine/app/build/outputs/apk/basic/debug/*.apk
+            engine/app/build/outputs/apk/filter/debug/*.apk
+          if-no-files-found: error
